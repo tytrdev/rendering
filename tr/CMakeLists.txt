@@ -8,6 +8,7 @@ endif()
 project(tinyrenderer LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(iwyu "Run include-what-you-use")
 if(iwyu)
@@ -21,9 +22,28 @@ endif()
 
 find_package(OpenMP COMPONENTS CXX)
 
-set(SOURCES main.cpp tgaimage.cpp)
+file(GLOB CORE_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
+add_library(tr_core STATIC ${CORE_SOURCES})
+target_include_directories(tr_core PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(tr_core PUBLIC $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)
 
-add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PRIVATE $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE tr_core)
+
+include(CTest)
+if(BUILD_TESTING)
+  file(GLOB TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tests/*.cpp")
+  file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/output")
+  foreach(test_src IN LISTS TEST_SOURCES)
+    get_filename_component(test_name "${test_src}" NAME_WE)
+    add_executable(${test_name} ${test_src})
+    target_link_libraries(${test_name} PRIVATE tr_core)
+    add_test(
+      NAME ${test_name}
+      COMMAND ${test_name}
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+  endforeach()
+endif()
 
 file(GENERATE OUTPUT .gitignore CONTENT "*")

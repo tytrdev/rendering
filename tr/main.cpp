@@ -1,23 +1,28 @@
+#include "draw.h"
+#include "model.h"
 #include "tgaimage.h"
+#include <iostream>
 
-constexpr TGAColor white = {255, 255, 255, 255}; // attention, BGRA order
-constexpr TGAColor green = {0, 255, 0, 255};
-constexpr TGAColor red = {0, 0, 255, 255};
-constexpr TGAColor blue = {255, 128, 64, 255};
-constexpr TGAColor yellow = {0, 200, 255, 255};
+constexpr int W = 800;
+constexpr int H = 800;
 
 int main(int argc, char **argv) {
-  constexpr int width = 64;
-  constexpr int height = 64;
-  TGAImage framebuffer(width, height, TGAImage::RGB);
+  if (argc != 2) {
+    std::cerr << "Usage: " << argv[0] << " obj/model.obj" << std::endl;
+    return 1;
+  }
 
-  int ax = 7, ay = 3;
-  int bx = 12, by = 37;
-  int cx = 62, cy = 53;
+  Model model(argv[1]);
+  TGAImage framebuffer(W, H, TGAImage::RGB);
 
-  framebuffer.set(ax, ay, white);
-  framebuffer.set(bx, by, white);
-  framebuffer.set(cx, cy, white);
+  for (int i = 0; i < model.nfaces(); i++) {
+    auto [ax, ay] = project(W, H, model.vert(i, 0));
+    auto [bx, by] = project(W, H, model.vert(i, 1));
+    auto [cx, cy] = project(W, H, model.vert(i, 2));
+    line(ax, ay, bx, by, framebuffer, red);
+    line(ax, ay, cx, cy, framebuffer, red);
+    line(bx, by, cx, cy, framebuffer, red);
+  }
 
   framebuffer.write_tga_file("framebuffer.tga");
   return 0;
